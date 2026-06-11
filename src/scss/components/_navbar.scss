@@ -1,0 +1,61 @@
+@use 'base/variables' as v;
+
+.navbar {
+    background-color: v.$primary;
+
+    .nav-link {
+
+        &:hover {
+            color: v.$gris-claro;
+            text-decoration: underline;
+        }
+    }
+
+    .offcanvas-header {
+        background-color: v.$primary;
+        color: v.$blanco;
+
+        .offcanvas-title {
+            font-weight: v.$black;
+        }
+    }
+
+    .offcanvas-body {
+        background-color: v.$primary;
+        color: v.$blanco;
+
+        .nav-link {
+            color: v.$blanco;
+            margin-bottom: 1rem;
+            text-decoration: none;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            font-weight: v.$bold;
+
+            &:hover {
+                color: v.$gris-claro;
+                background-color: v.$primary-dark;
+                transition: background-color 0.3s ease;
+            }
+        }
+    }
+
+    .navbar-brand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        text-transform: none;
+        font-weight: v.$bold;
+        margin: 0;
+        padding: 0;
+        .navbar-name {
+            color: v.$primary;
+            background-color: v.$blanco;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.5rem;
+            font-weight: v.$black;
+        }
+    }
+
+}

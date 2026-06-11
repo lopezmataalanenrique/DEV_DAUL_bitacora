@@ -1,0 +1,21 @@
+@use 'base/variables' as v;
+
+.new-user-main {
+    display: flex;
+    flex-direction: column;
+    align-items: left;
+    justify-content: center;
+    gap: 2rem;
+    background-color: v.$blanco;
+    padding: 2rem;
+    border-radius: 1rem;
+    max-width: 65rem;
+    min-width: min(90%, 40rem);
+    h1 {
+        font-weight: v.$bold;
+        color: v.$primary;
+        text-align: left;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+}

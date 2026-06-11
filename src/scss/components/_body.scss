@@ -1,0 +1,10 @@
+@use 'base/variables' as v;
+
+.body-login {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100dvh;
+    background-color: v.$bg-login;
+    padding: 8rem 0 4rem 0;
+}

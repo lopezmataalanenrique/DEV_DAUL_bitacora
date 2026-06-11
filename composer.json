@@ -1,0 +1,21 @@
+{
+    "name": "alane/bitacora-dev",
+    "description": "Bitácora DEV registro de atenciones",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "MVC\\" : "./",
+            "Controllers\\" : "./controllers",
+            "Model\\" : "./models"
+        }
+    },
+    "authors": [
+        {
+            "name": "Alan Enrique López Mata",
+            "email": "alopezm1612@alumno.ipn.mx"
+        }
+    ],
+    "require": {
+        "vlucas/phpdotenv": "^5.6"
+    }
+}

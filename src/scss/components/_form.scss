@@ -1,0 +1,125 @@
+@use 'base/variables' as v;
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-bottom: 1.5rem;
+    row-gap: 1rem;
+
+    label {
+        color: v.$primary-dark;
+        font-size: 1.2rem;
+        text-transform: uppercase;
+        font-weight: v.$bold;
+    }
+
+    input {
+        padding: 0.8rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1.6rem;
+        background-color: v.$gris-claro; 
+    }
+
+    input::placeholder {
+        color: v.$gris;
+        opacity: 0.5;
+    }
+
+    select {
+        padding: 0.8rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1.6rem;
+        background-color: v.$gris-claro;
+        
+    }
+}
+
+.enviar-btn {
+    background-color: v.$primary;
+    color: v.$blanco;
+    padding: 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1.6rem;
+    font-weight: v.$bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+    margin: 1rem 0;
+
+    &:hover {
+        background-color: v.$primary-dark;
+        transform: scale(1.05);
+    }
+}
+
+.password-requirements {
+    font-size: 1.2rem;
+    font-style: italic;
+    color: v.$gris;
+    margin-top: -1rem;
+    margin-bottom: 1rem;
+}
+
+.fecha-atencion {
+    font-family: v.$fuente_principal;
+    color: rgb(v.$primary-dark, 0.5);
+    font-size: 1.6rem;
+    font-weight: v.$bold;
+}
+
+fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+legend {
+    font-size: 1.8rem;
+    font-weight: v.$bold;
+    margin-bottom: 1.5rem;
+}
+
+.radio-perfil {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid v.$primary;
+    border-radius: 50%;
+    margin: 0;
+    cursor: pointer;
+    position: relative;
+    transition: all .2s ease;
+}
+
+.radio-perfil:checked::before {
+    content: '';
+    position: absolute;
+    width: 1rem;
+    height: 1rem;
+    background-color: v.$primary;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.radio-perfil:focus {
+    box-shadow: 0 0 0 4px rgba(v.$primary, .2);
+}
+
+fieldset > div {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+fieldset label {
+    cursor: pointer;
+    margin: 0;
+}
