@@ -7,15 +7,15 @@ class Atencion extends ActiveRecord
     // Base de datos (Solo las columnas que realmente existen en la tabla atenciones)
     protected static $tabla = 'atenciones';
     protected static $columnasDB = [
-        'id', 
-        'id_tipo_atencion', 
-        'id_motivo_atencion', 
-        'id_medio_atencion', 
-        'id_usuario', 
-        'id_escuela', 
+        'id',
+        'id_tipo_atencion',
+        'id_motivo_atencion',
+        'id_medio_atencion',
+        'id_usuario',
+        'id_escuela',
         'fecha_atencion',
         'nombre_completo',
-        'correo',          
+        'correo',
     ];
 
     public $id;
@@ -28,24 +28,35 @@ class Atencion extends ActiveRecord
     public $correo;
     public $nombre_completo;
 
+    // Propiedades virtuales para los JOINS
+    public $escuela_nombre;
+    public $motivo_nombre;
+    public $medio_nombre;
+    public $tipo_nombre;
+
     public function __construct($args = [])
     {
-        $this->id = $args['id'] ?? null; 
-        
+        $this->id = $args['id'] ?? null;
+
         // IDs de los catálogos
         $this->id_tipo_atencion = $args['id_tipo_atencion'] ?? '';
         $this->id_motivo_atencion = $args['id_motivo_atencion'] ?? '';
         $this->id_medio_atencion = $args['id_medio_atencion'] ?? '';
         $this->id_escuela = $args['id_escuela'] ?? '';
-        
+
         // Llave foránea del usuario
         $this->id_usuario = $args['id_usuario'] ?? '';
-        
+
         $this->fecha_atencion = $args['fecha_atencion'] ?? date('Y-m-d H:i:s');
 
         // Datos virtuales para mantenerlos en el formulario si hay error
         $this->correo = $args['correo'] ?? '';
         $this->nombre_completo = $args['nombre_completo'] ?? '';
+
+        $this->escuela_nombre = $args['escuela_nombre'] ?? '';
+        $this->motivo_nombre = $args['motivo_nombre'] ?? '';
+        $this->medio_nombre = $args['medio_nombre'] ?? '';
+        $this->tipo_nombre = $args['tipo_nombre'] ?? '';
     }
 
     // Validación actualizada
@@ -71,5 +82,52 @@ class Atencion extends ActiveRecord
         }
 
         return self::$alertas;
+    }
+
+    // Método para paginar con filtros de rango de fechas
+    public static function paginarAtenciones($id_usuario, $por_pagina, $offset, $fecha_inicio = '', $fecha_fin = '')
+    {
+        $query = "SELECT a.*, 
+                  e.nombre as escuela_nombre, 
+                  m.nombre as motivo_nombre, 
+                  med.nombre as medio_nombre, 
+                  t.nombre as tipo_nombre 
+                  FROM atenciones a 
+                  LEFT JOIN cat_escuela e ON a.id_escuela = e.id 
+                  LEFT JOIN cat_motivo_atencion m ON a.id_motivo_atencion = m.id 
+                  LEFT JOIN cat_medio_atencion med ON a.id_medio_atencion = med.id 
+                  LEFT JOIN cat_tipo_atencion t ON a.id_tipo_atencion = t.id 
+                  WHERE a.id_usuario = " . self::$db->escape_string($id_usuario);
+
+        // Lógica inteligente para el rango de fechas
+        if ($fecha_inicio && $fecha_fin) {
+            $query .= " AND DATE(a.fecha_atencion) BETWEEN '" . self::$db->escape_string($fecha_inicio) . "' AND '" . self::$db->escape_string($fecha_fin) . "'";
+        } else if ($fecha_inicio) {
+            $query .= " AND DATE(a.fecha_atencion) >= '" . self::$db->escape_string($fecha_inicio) . "'";
+        } else if ($fecha_fin) {
+            $query .= " AND DATE(a.fecha_atencion) <= '" . self::$db->escape_string($fecha_fin) . "'";
+        }
+
+        $query .= " ORDER BY a.fecha_atencion DESC LIMIT {$por_pagina} OFFSET {$offset}";
+
+        return self::consultarSQL($query);
+    }
+
+    // Método para contar (mismas reglas de fechas)
+    public static function contarAtenciones($id_usuario, $fecha_inicio = '', $fecha_fin = '')
+    {
+        $query = "SELECT COUNT(*) as total FROM atenciones WHERE id_usuario = " . self::$db->escape_string($id_usuario);
+
+        if ($fecha_inicio && $fecha_fin) {
+            $query .= " AND DATE(fecha_atencion) BETWEEN '" . self::$db->escape_string($fecha_inicio) . "' AND '" . self::$db->escape_string($fecha_fin) . "'";
+        } else if ($fecha_inicio) {
+            $query .= " AND DATE(fecha_atencion) >= '" . self::$db->escape_string($fecha_inicio) . "'";
+        } else if ($fecha_fin) {
+            $query .= " AND DATE(fecha_atencion) <= '" . self::$db->escape_string($fecha_fin) . "'";
+        }
+
+        $resultado = self::$db->query($query);
+        $fila = $resultado->fetch_assoc();
+        return $fila['total'];
     }
 }

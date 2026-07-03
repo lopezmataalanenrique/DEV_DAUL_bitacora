@@ -164,4 +164,74 @@ class BitacoraController
             exit; // Detenemos la ejecución porque esto es una API, no una vista HTML
         }
     }
+
+    public static function misAtenciones(Router $router)
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        $id_usuario = $_SESSION['id'] ?? null;
+
+        if (!$id_usuario) {
+            header('Location: /');
+            exit;
+        }
+
+        // Inicializamos el arreglo de alertas
+        $alertas = [];
+        $fecha_hoy = date('Y-m-d'); // Obtenemos la fecha de hoy (2026-06-23)
+
+        // --- LÓGICA DE FILTROS Y VALIDACIÓN ---
+        if (!isset($_GET['inicio']) && !isset($_GET['fin'])) {
+            $fecha_inicio = date('Y-m-01');
+            $fecha_fin = $fecha_hoy;
+        } else {
+            $fecha_inicio = $_GET['inicio'];
+            $fecha_fin = $_GET['fin'];
+
+            // 1ra Validación: Que inicio no sea mayor que fin
+            if ($fecha_inicio && $fecha_fin && $fecha_inicio > $fecha_fin) {
+                $alertas['error'][] = 'La fecha de inicio no puede ser mayor a la fecha final.';
+            }
+
+            // 2da Validación: Que la fecha final no sea en el futuro
+            if ($fecha_fin > $fecha_hoy) {
+                $alertas['error'][] = 'La fecha final no puede ser mayor al día de hoy.';
+            }
+
+            // Si hubo algún error en las fechas, reiniciamos el filtro al mes actual por seguridad
+            if (!empty($alertas)) {
+                $fecha_inicio = date('Y-m-01');
+                $fecha_fin = $fecha_hoy;
+            }
+        }
+
+        // 2. Lógica de Paginación
+        $pagina_actual = $_GET['page'] ?? 1;
+        $pagina_actual = filter_var($pagina_actual, FILTER_VALIDATE_INT);
+        if (!$pagina_actual || $pagina_actual < 1) {
+            $pagina_actual = 1;
+        }
+
+        $registros_por_pagina = 10;
+        $offset = ($pagina_actual - 1) * $registros_por_pagina;
+
+        // 3. Consultas a la BD
+        $total_registros = Atencion::contarAtenciones($id_usuario, $fecha_inicio, $fecha_fin);
+        $total_paginas = ceil($total_registros / $registros_por_pagina);
+
+        $atenciones = Atencion::paginarAtenciones($id_usuario, $registros_por_pagina, $offset, $fecha_inicio, $fecha_fin);
+
+        // 4. Renderizar la vista
+        $router->render('bitacora/mis-atenciones', [
+            'alertas' => $alertas, // <--- Pasamos las alertas a la vista
+            'atenciones' => $atenciones,
+            'total_paginas' => $total_paginas,
+            'pagina_actual' => $pagina_actual,
+            'fecha_inicio' => $fecha_inicio,
+            'fecha_fin' => $fecha_fin,
+            'total_registros' => $total_registros
+        ], 'layout_app');
+    }
 }
