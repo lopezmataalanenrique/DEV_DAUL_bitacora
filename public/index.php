@@ -23,5 +23,7 @@ $router->post('/crear-atencion', [BitacoraController::class, 'crearAtencion']);
 $router->post('/api/buscar-comunidad', [Controllers\BitacoraController::class, 'buscarComunidad']);
 // Mis atenciones
 $router->get('/mis-atenciones', [BitacoraController::class, 'misAtenciones']);
+// Reportes
+$router->get('/reportes', [Controllers\BitacoraController::class, 'reportes']);
 // Comprueba y valida las rutas, que existan y les asigna las funciones del Controlador
 $router->comprobarRutas();

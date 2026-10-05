@@ -34,6 +34,9 @@ class Atencion extends ActiveRecord
     public $medio_nombre;
     public $tipo_nombre;
 
+    // Propiedad virtual para el nombre del usuario (no se almacena en la base de datos)
+    public $usuario_nombre;
+
     public function __construct($args = [])
     {
         $this->id = $args['id'] ?? null;
@@ -57,6 +60,9 @@ class Atencion extends ActiveRecord
         $this->motivo_nombre = $args['motivo_nombre'] ?? '';
         $this->medio_nombre = $args['medio_nombre'] ?? '';
         $this->tipo_nombre = $args['tipo_nombre'] ?? '';
+
+        // Inicializar la propiedad virtual para el nombre del usuario
+        $this->usuario_nombre = $args['usuario_nombre'] ?? '';
     }
 
     // Validación actualizada
@@ -125,6 +131,53 @@ class Atencion extends ActiveRecord
         } else if ($fecha_fin) {
             $query .= " AND DATE(fecha_atencion) <= '" . self::$db->escape_string($fecha_fin) . "'";
         }
+
+        $resultado = self::$db->query($query);
+        $fila = $resultado->fetch_assoc();
+        return $fila['total'];
+    }
+
+    public static function paginarReportes($por_pagina, $offset, $filtros = []) {
+        $query = "SELECT a.*, 
+                  e.nombre as escuela_nombre, 
+                  m.nombre as motivo_nombre, 
+                  med.nombre as medio_nombre, 
+                  t.nombre as tipo_nombre,
+                  u.name as usuario_nombre 
+                  FROM atenciones a 
+                  LEFT JOIN cat_escuela e ON a.id_escuela = e.id 
+                  LEFT JOIN cat_motivo_atencion m ON a.id_motivo_atencion = m.id 
+                  LEFT JOIN cat_medio_atencion med ON a.id_medio_atencion = med.id 
+                  LEFT JOIN cat_tipo_atencion t ON a.id_tipo_atencion = t.id 
+                  LEFT JOIN usuarios u ON a.id_usuario = u.id 
+                  WHERE 1=1"; // WHERE 1=1 es un truco para concatenar los AND fácilmente
+
+        // Fechas
+        if(!empty($filtros['inicio']) && !empty($filtros['fin'])) {
+            $query .= " AND DATE(a.fecha_atencion) BETWEEN '" . self::$db->escape_string($filtros['inicio']) . "' AND '" . self::$db->escape_string($filtros['fin']) . "'";
+        }
+        // Catálogos
+        if(!empty($filtros['id_tipo_atencion'])) $query .= " AND a.id_tipo_atencion = '" . self::$db->escape_string($filtros['id_tipo_atencion']) . "'";
+        if(!empty($filtros['id_motivo_atencion'])) $query .= " AND a.id_motivo_atencion = '" . self::$db->escape_string($filtros['id_motivo_atencion']) . "'";
+        if(!empty($filtros['id_medio_atencion'])) $query .= " AND a.id_medio_atencion = '" . self::$db->escape_string($filtros['id_medio_atencion']) . "'";
+        if(!empty($filtros['id_escuela'])) $query .= " AND a.id_escuela = '" . self::$db->escape_string($filtros['id_escuela']) . "'";
+        if(!empty($filtros['id_usuario'])) $query .= " AND a.id_usuario = '" . self::$db->escape_string($filtros['id_usuario']) . "'";
+
+        $query .= " ORDER BY a.fecha_atencion DESC LIMIT {$por_pagina} OFFSET {$offset}";
+        return self::consultarSQL($query);
+    }
+
+    public static function contarReportes($filtros = []) {
+        $query = "SELECT COUNT(*) as total FROM atenciones a WHERE 1=1";
+        
+        if(!empty($filtros['inicio']) && !empty($filtros['fin'])) {
+            $query .= " AND DATE(a.fecha_atencion) BETWEEN '" . self::$db->escape_string($filtros['inicio']) . "' AND '" . self::$db->escape_string($filtros['fin']) . "'";
+        }
+        if(!empty($filtros['id_tipo_atencion'])) $query .= " AND a.id_tipo_atencion = '" . self::$db->escape_string($filtros['id_tipo_atencion']) . "'";
+        if(!empty($filtros['id_motivo_atencion'])) $query .= " AND a.id_motivo_atencion = '" . self::$db->escape_string($filtros['id_motivo_atencion']) . "'";
+        if(!empty($filtros['id_medio_atencion'])) $query .= " AND a.id_medio_atencion = '" . self::$db->escape_string($filtros['id_medio_atencion']) . "'";
+        if(!empty($filtros['id_escuela'])) $query .= " AND a.id_escuela = '" . self::$db->escape_string($filtros['id_escuela']) . "'";
+        if(!empty($filtros['id_usuario'])) $query .= " AND a.id_usuario = '" . self::$db->escape_string($filtros['id_usuario']) . "'";
 
         $resultado = self::$db->query($query);
         $fila = $resultado->fetch_assoc();

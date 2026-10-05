@@ -234,4 +234,81 @@ class BitacoraController
             'total_registros' => $total_registros
         ], 'layout_app');
     }
+
+    public static function reportes(Router $router)
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        // SEGURIDAD: Solo Administrador (1) y Supervisor (2)
+        if (!isset($_SESSION['rol']) || !in_array($_SESSION['rol'], ['1', '2'])) {
+            header('Location: /mis-atenciones'); // Si no tiene permiso, lo pateamos
+            exit;
+        }
+
+        $alertas = [];
+        $fecha_hoy = date('Y-m-d');
+
+        // --- MANEJO DE FECHAS (Igual a tus atenciones) ---
+        if (!isset($_GET['inicio']) && !isset($_GET['fin'])) {
+            $_GET['inicio'] = date('Y-m-01');
+            $_GET['fin'] = $fecha_hoy;
+        } else {
+            if ($_GET['inicio'] && $_GET['fin'] && $_GET['inicio'] > $_GET['fin']) {
+                $alertas['error'][] = 'La fecha de inicio no puede ser mayor a la fecha final.';
+            }
+            if ($_GET['fin'] > $fecha_hoy) {
+                $alertas['error'][] = 'La fecha final no puede ser mayor al día de hoy.';
+            }
+            if (!empty($alertas)) {
+                $_GET['inicio'] = date('Y-m-01');
+                $_GET['fin'] = $fecha_hoy;
+            }
+        }
+
+        // Armamos el arreglo de filtros basándonos en la URL limpia
+        $filtros = [
+            'inicio' => $_GET['inicio'] ?? '',
+            'fin' => $_GET['fin'] ?? '',
+            'id_tipo_atencion' => $_GET['id_tipo_atencion'] ?? '',
+            'id_motivo_atencion' => $_GET['id_motivo_atencion'] ?? '',
+            'id_medio_atencion' => $_GET['id_medio_atencion'] ?? '',
+            'id_escuela' => $_GET['id_escuela'] ?? '',
+            'id_usuario' => $_GET['id_usuario'] ?? ''
+        ];
+
+        // --- PAGINACIÓN ---
+        $pagina_actual = filter_var($_GET['page'] ?? 1, FILTER_VALIDATE_INT) ?: 1;
+        $registros_por_pagina = 10;
+        $offset = ($pagina_actual - 1) * $registros_por_pagina;
+
+        // --- CONSULTAS ---
+        $total_registros = Atencion::contarReportes($filtros);
+        $total_paginas = ceil($total_registros / $registros_por_pagina);
+        $atenciones = Atencion::paginarReportes($registros_por_pagina, $offset, $filtros);
+
+        // --- OBTENER CATÁLOGOS PARA LOS SELECTS ---
+        $escuelas = CatEscuela::all();
+        $tipos_atencion = CatTipoAtencion::all();
+        $motivos = CatMotivoAtencion::all();
+        $medios = CatMedioAtencion::all();
+        $usuarios = Usuario::all(); // Traemos a todos los usuarios registrados
+
+        $router->render('bitacora/reportes', [
+            'alertas' => $alertas,
+            'atenciones' => $atenciones,
+            'total_paginas' => $total_paginas,
+            'pagina_actual' => $pagina_actual,
+            'filtros' => $filtros,
+            'total_registros' => $total_registros,
+            
+            // Catálogos
+            'escuelas' => $escuelas,
+            'tipos_atencion' => $tipos_atencion,
+            'motivos' => $motivos,
+            'medios' => $medios,
+            'usuarios' => $usuarios
+        ], 'layout_app');
+    }
 }
