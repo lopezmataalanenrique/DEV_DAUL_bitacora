@@ -51,11 +51,11 @@ function procesarImagenes(file, outputSubDir) {
     const extName = path.extname(file)
 
     if (extName.toLowerCase() === '.svg') {
-        // If it's an SVG file, move it to the output directory
+        // Si es un archivo SVG, se copia al directorio de salida
         const outputFile = path.join(outputSubDir, `${baseName}${extName}`);
     fs.copyFileSync(file, outputFile);
     } else {
-        // For other image formats, process them with sharp
+        // Para otros formatos de imagen, se procesan con sharp
         const outputFile = path.join(outputSubDir, `${baseName}${extName}`);
         const outputFileWebp = path.join(outputSubDir, `${baseName}.webp`);
         const outputFileAvif = path.join(outputSubDir, `${baseName}.avif`);
