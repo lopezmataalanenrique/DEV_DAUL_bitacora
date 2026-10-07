@@ -16,6 +16,19 @@ class BitacoraController
 {
     public static function crearUsuario(Router $router)
     {
+
+        // --- PROTECCIÓN DE RUTA ---
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        // SEGURIDAD: Solo Administrador (Rol 1)
+        if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== '1') {
+            // Si es un rol menor, lo mandamos a su pantalla principal
+            header('Location: /crear-atencion'); 
+            exit;
+        }
+
         $alertas = [];
 
         // Consultamos todos los roles para mostrarlos en el select del formulario
@@ -56,9 +69,15 @@ class BitacoraController
 
     public static function crearAtencion(Router $router)
     {
-        // 1. Asegurarnos de que la sesión esté iniciada para leer el id del analista
+        // 1. Asegurarnos de que la sesión esté iniciada
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
+        }
+
+        // SEGURIDAD: Verificar que el usuario tenga una sesión activa válida
+        if (!isset($_SESSION['id'])) {
+            header('Location: /'); // Si no ha iniciado sesión, lo mandamos al login
+            exit;
         }
 
         $alertas = [];
