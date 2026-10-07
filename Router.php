@@ -28,7 +28,7 @@ class Router
 
         // $auth = $_SESSION['login'] ?? null;
 
-        $currentUrl = $_SERVER['PATH_INFO'] ?? '/';
+        $currentUrl = strtok($_SERVER['REQUEST_URI'], '?') ?? '/'; // strtok() devuelve la parte de la cadena antes del primer delimitador, en este caso el signo de interrogación, que indica el inicio de los parámetros de la URL. Si no hay parámetros, devuelve toda la URL. El operador null coalescing (??) asegura que si $_SERVER['REQUEST_URI'] es null, se asigna '/' como valor predeterminado.
         $method = $_SERVER['REQUEST_METHOD'];
 
         if ($method === 'GET') {
