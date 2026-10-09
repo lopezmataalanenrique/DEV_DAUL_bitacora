@@ -27,5 +27,11 @@ $router->get('/mis-atenciones', [BitacoraController::class, 'misAtenciones']);
 $router->get('/reportes', [Controllers\BitacoraController::class, 'reportes']);
 // Exportar reportes a CSV
 $router->post('/reportes/exportar', [Controllers\BitacoraController::class, 'exportarCsv']);
+// Administrar usuarios
+$router->get('/administrar-usuarios', [Controllers\BitacoraController::class, 'administrarUsuarios']);
+$router->post('/usuario/cambiar-estado', [Controllers\BitacoraController::class, 'cambiarEstadoUsuario']);
+// Editar usuario
+$router->get('/editar-usuario', [Controllers\BitacoraController::class, 'editarUsuario']);
+$router->post('/editar-usuario', [Controllers\BitacoraController::class, 'editarUsuario']);
 // Comprueba y valida las rutas, que existan y les asigna las funciones del Controlador
 $router->comprobarRutas();

@@ -15,6 +15,7 @@ class Usuario extends ActiveRecord
     public $created_date;
     public $rol;
     public $status;
+    public $rol_nombre; 
 
     public function __construct($args = [])
     {
@@ -26,6 +27,7 @@ class Usuario extends ActiveRecord
         $this->rol = $args['rol'] ?? 3; // 3 es el rol por defecto para los analistas
         $this->status = $args['status'] ?? 1; // 1 es el estado por defecto para usuarios activos
         $this->name = $args['name'] ?? '';
+        $this->rol_nombre = $args['rol_nombre'] ?? '';
     }
 
     public function validarLogin()
@@ -99,5 +101,79 @@ class Usuario extends ActiveRecord
         }
 
         
+    }
+
+    public static function paginarUsuarios($por_pagina, $offset, $filtros = []) {
+        // Hacemos JOIN con cat_rol para traer el nombre del perfil
+        $query = "SELECT u.*, r.nombre as rol_nombre 
+                  FROM usuarios u 
+                  LEFT JOIN cat_rol r ON u.rol = r.id 
+                  WHERE 1=1";
+
+        // Filtro por Estado (Activo/Inactivo)
+        if (isset($filtros['status']) && $filtros['status'] !== '') {
+            $query .= " AND u.status = '" . self::$db->escape_string($filtros['status']) . "'";
+        }
+        // Filtro por Rol
+        if (!empty($filtros['rol'])) {
+            $query .= " AND u.rol = '" . self::$db->escape_string($filtros['rol']) . "'";
+        }
+        // Filtro de Búsqueda (Nombre o Correo)
+        if (!empty($filtros['busqueda'])) {
+            $busqueda = self::$db->escape_string($filtros['busqueda']);
+            $query .= " AND (u.name LIKE '%$busqueda%' OR u.email LIKE '%$busqueda%')";
+        }
+
+        $query .= " ORDER BY u.id DESC LIMIT {$por_pagina} OFFSET {$offset}";
+        return self::consultarSQL($query);
+    }
+
+    public static function contarUsuarios($filtros = []) {
+        $query = "SELECT COUNT(*) as total FROM usuarios u WHERE 1=1";
+        
+        if (isset($filtros['status']) && $filtros['status'] !== '') {
+            $query .= " AND u.status = '" . self::$db->escape_string($filtros['status']) . "'";
+        }
+        if (!empty($filtros['rol'])) {
+            $query .= " AND u.rol = '" . self::$db->escape_string($filtros['rol']) . "'";
+        }
+        if (!empty($filtros['busqueda'])) {
+            $busqueda = self::$db->escape_string($filtros['busqueda']);
+            $query .= " AND (u.name LIKE '%$busqueda%' OR u.email LIKE '%$busqueda%')";
+        }
+
+        $resultado = self::$db->query($query);
+        return $resultado->fetch_assoc()['total'];
+    }
+
+    // Valida los datos específicamente para la pantalla de edición
+    public function validarEdicion() {
+        if(!$this->name) {
+            self::$alertas['error'][] = 'El Nombre es Obligatorio';
+        }
+        if(!$this->email) {
+            self::$alertas['error'][] = 'El Email es Obligatorio';
+        }
+        
+        // Si el administrador escribió algo en el campo de password, lo validamos
+        if(!empty($this->password)) {
+            if(strlen($this->password) < 8) {
+                self::$alertas['error'][] = 'El Password debe contener al menos 8 caracteres';
+            }
+            if($this->password !== $this->confirm_password) {
+                self::$alertas['error'][] = 'Los passwords no coinciden';
+            }
+        }
+        return self::$alertas;
+    }
+
+    // Comprueba que si cambia su correo, no choque con el de OTRO usuario diferente
+    public function comprobarEmailEdicion() {
+        $query = "SELECT * FROM " . self::$tabla . " WHERE email = '" . self::$db->escape_string($this->email) . "' AND id != " . self::$db->escape_string($this->id) . " LIMIT 1";
+        $resultado = self::$db->query($query);
+        if($resultado->num_rows) {
+            self::$alertas['error'][] = 'Este correo electrónico ya está en uso por otro usuario';
+        }
+        return $resultado;
     }
 }

@@ -38,12 +38,22 @@
                     <div class="offcanvas-body">
                         <ul class="navbar-nav justify-content-end flex-grow-1">
 
+                            <!-- ENLACES EXCLUSIVOS PARA ADMINISTRADOR (Rol 1) -->
                             <?php if (isset($_SESSION['rol']) && $_SESSION['rol'] === '1'): ?>
                                 <li class="nav-item">
                                     <a class="nav-link fs-2 <?php echo ($rutaActual === '/crear-usuario') ? 'active' : ''; ?>"
                                         <?php echo ($rutaActual === '/crear-usuario') ? 'aria-current="page"' : ''; ?>
                                         href="/crear-usuario">Crear Usuario</a>
                                 </li>
+                                <li class="nav-item">
+                                    <a class="nav-link fs-2 <?php echo ($rutaActual === '/administrar-usuarios') ? 'active' : ''; ?>"
+                                        <?php echo ($rutaActual === '/administrar-usuarios') ? 'aria-current="page"' : ''; ?>
+                                        href="/administrar-usuarios">Administrar Usuarios</a>
+                                </li>
+                            <?php endif; ?>
+
+                            <!-- ENLACES PARA ADMINISTRADOR Y SUPERVISOR (Roles 1 y 2) -->
+                            <?php if (isset($_SESSION['rol']) && in_array($_SESSION['rol'], ['1', '2'])): ?>
                                 <li class="nav-item">
                                     <a class="nav-link fs-2 <?php echo ($rutaActual === '/reportes') ? 'active' : ''; ?>"
                                         <?php echo ($rutaActual === '/reportes') ? 'aria-current="page"' : ''; ?>

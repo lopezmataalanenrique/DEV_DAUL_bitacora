@@ -407,5 +407,147 @@ class BitacoraController
         exit; // Detenemos la ejecución para que no renderice HTML al final del archivo
     }
 
+    public static function administrarUsuarios(Router $router)
+    {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+
+        // SEGURIDAD: Solo Administrador (Rol 1)
+        if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== '1') {
+            header('Location: /crear-atencion');
+            exit;
+        }
+
+        // 1. Recibir Filtros
+        $filtros = [
+            'status' => $_GET['status'] ?? '',
+            'rol' => $_GET['rol'] ?? '',
+            'busqueda' => $_GET['busqueda'] ?? ''
+        ];
+
+        // 2. Paginación
+        $pagina_actual = filter_var($_GET['page'] ?? 1, FILTER_VALIDATE_INT) ?: 1;
+        $registros_por_pagina = 10;
+        $offset = ($pagina_actual - 1) * $registros_por_pagina;
+
+        // 3. Consultas
+        $total_registros = Usuario::contarUsuarios($filtros);
+        $total_paginas = ceil($total_registros / $registros_por_pagina);
+        $usuarios = Usuario::paginarUsuarios($registros_por_pagina, $offset, $filtros);
+        $roles = CatRol::all();
+
+        $router->render('admin/usuarios', [
+            'usuarios' => $usuarios,
+            'total_paginas' => $total_paginas,
+            'pagina_actual' => $pagina_actual,
+            'filtros' => $filtros,
+            'total_registros' => $total_registros,
+            'roles' => $roles
+        ], 'layout_app');
+    }
+
+    public static function cambiarEstadoUsuario()
+    {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        
+        // Seguridad estricta
+        if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== '1') {
+            header('Location: /');
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = filter_var($_POST['id'], FILTER_VALIDATE_INT);
+            
+            if ($id) {
+                $usuario = Usuario::find($id);
+                // Evitamos que el admin se desactive a sí mismo
+                if ($usuario && $usuario->id !== $_SESSION['id']) {
+                    // Cambiamos el estado (si es 1 pasa a 0, si es 0 pasa a 1)
+                    $usuario->status = ($usuario->status == '1') ? '0' : '1';
+                    $usuario->guardar();
+                }
+            }
+            // Regresamos a la pantalla manteniendo los filtros y la paginación que traía en la URL
+            header('Location: ' . $_SERVER['HTTP_REFERER']);
+        }
+    }
+
+    public static function editarUsuario(Router $router)
+    {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+
+        // SEGURIDAD: Solo Administrador
+        if (!isset($_SESSION['rol']) || $_SESSION['rol'] !== '1') {
+            header('Location: /crear-atencion');
+            exit;
+        }
+
+        // Obtener el ID de la URL y validar que sea un número válido
+        $id = filter_var($_GET['id'] ?? '', FILTER_VALIDATE_INT);
+        if (!$id) {
+            header('Location: /administrar-usuarios');
+            exit;
+        }
+
+        // Buscar el usuario a editar
+        $usuario = Usuario::find($id);
+        if (!$usuario) {
+            header('Location: /administrar-usuarios');
+            exit;
+        }
+
+        $alertas = [];
+        $roles = CatRol::all();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Respaldamos el password actual por si el admin deja el campo en blanco
+            $password_actual = $usuario->password;
+
+            // Sincronizar el objeto con los datos enviados por POST
+            $usuario->sincronizar($_POST);
+            $usuario->confirm_password = $_POST['confirm_password'] ?? '';
+
+            // Validar
+            $alertas = $usuario->validarEdicion();
+
+            if (empty($alertas)) {
+                // Comprobar que el correo no pertenezca a otra persona
+                $existe = $usuario->comprobarEmailEdicion();
+
+                if (!$existe->num_rows) {
+                    
+                    // Si escribieron un nuevo password, lo hasheamos
+                    if (!empty($_POST['password'])) {
+                        $usuario->hashPassword();
+                    } else {
+                        // Si lo dejaron en blanco, mantenemos el que ya tenía en la BD
+                        $usuario->password = $password_actual;
+                    }
+
+                    // Limpiar confirmación para que no intente guardarla en la base de datos
+                    unset($usuario->confirm_password);
+                    unset($usuario->rol_nombre); // Por si tu modelo virtual choca al guardar
+
+                    $resultado = $usuario->guardar();
+
+                    if ($resultado) {
+                        Usuario::setAlerta('exito', 'Usuario editado correctamente');
+                        $alertas = Usuario::getAlertas();
+                    } else {
+                        Usuario::setAlerta('error', 'Error al guardar los cambios');
+                        $alertas = Usuario::getAlertas();
+                    }
+                } else {
+                    $alertas = Usuario::getAlertas();
+                }
+            }
+        }
+
+        $router->render('admin/editar-usuario', [
+            'alertas' => $alertas,
+            'usuario' => $usuario,
+            'roles' => $roles
+        ], 'layout_app');
+    }
     
 }
