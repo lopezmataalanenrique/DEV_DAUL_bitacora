@@ -183,4 +183,77 @@ class Atencion extends ActiveRecord
         $fila = $resultado->fetch_assoc();
         return $fila['total'];
     }
+
+    public static function obtenerParaCsv($fecha_inicio, $fecha_fin) {
+        $query = "SELECT a.*, 
+                  e.nombre as escuela_nombre, 
+                  m.nombre as motivo_nombre, 
+                  med.nombre as medio_nombre, 
+                  t.nombre as tipo_nombre,
+                  u.name as usuario_nombre 
+                  FROM atenciones a 
+                  LEFT JOIN cat_escuela e ON a.id_escuela = e.id 
+                  LEFT JOIN cat_motivo_atencion m ON a.id_motivo_atencion = m.id 
+                  LEFT JOIN cat_medio_atencion med ON a.id_medio_atencion = med.id 
+                  LEFT JOIN cat_tipo_atencion t ON a.id_tipo_atencion = t.id 
+                  LEFT JOIN usuarios u ON a.id_usuario = u.id 
+                  WHERE 1=1";
+
+        if ($fecha_inicio && $fecha_fin) {
+            $query .= " AND DATE(a.fecha_atencion) BETWEEN '" . self::$db->escape_string($fecha_inicio) . "' AND '" . self::$db->escape_string($fecha_fin) . "'";
+        }
+
+        $query .= " ORDER BY a.fecha_atencion DESC";
+        
+        return self::consultarSQL($query);
+    }
+
+    public static function obtenerEstadisticas($tipo = 'mes', $valor = '') {
+        $stats = [
+            'total' => 0,
+            'por_usuario' => [],
+            'por_motivo' => [],
+            'por_medio' => []
+        ];
+
+        $where = "";
+
+        if ($tipo === 'semana') {
+            // Formato que envía HTML5: "2026-W41"
+            if ($valor && preg_match('/^(\d{4})-W(\d{2})$/', $valor, $matches)) {
+                $where = "YEARWEEK(fecha_atencion, 1) = '" . $matches[1] . $matches[2] . "'";
+            } else {
+                $where = "YEARWEEK(fecha_atencion, 1) = YEARWEEK(CURDATE(), 1)";
+            }
+        } else if ($tipo === 'trimestre') {
+            // Formato que crearemos: "2026-3" (Año-Trimestre)
+            if ($valor && preg_match('/^(\d{4})-(\d)$/', $valor, $matches)) {
+                $where = "YEAR(fecha_atencion) = '" . $matches[1] . "' AND QUARTER(fecha_atencion) = '" . $matches[2] . "'";
+            } else {
+                $where = "YEAR(fecha_atencion) = YEAR(CURDATE()) AND QUARTER(fecha_atencion) = QUARTER(CURDATE())";
+            }
+        } else {
+            // Mes (por defecto). Formato HTML5: "2026-10"
+            if ($valor && preg_match('/^(\d{4})-(\d{2})$/', $valor, $matches)) {
+                $where = "YEAR(fecha_atencion) = '" . $matches[1] . "' AND MONTH(fecha_atencion) = '" . $matches[2] . "'";
+            } else {
+                $where = "YEAR(fecha_atencion) = YEAR(CURDATE()) AND MONTH(fecha_atencion) = MONTH(CURDATE())";
+            }
+        }
+
+        // Consultas
+        $res = self::$db->query("SELECT COUNT(*) as total FROM atenciones WHERE $where");
+        if($res) $stats['total'] = $res->fetch_assoc()['total'];
+
+        $res = self::$db->query("SELECT u.name as etiqueta, COUNT(a.id) as total FROM atenciones a INNER JOIN usuarios u ON a.id_usuario = u.id WHERE $where GROUP BY u.id ORDER BY total DESC");
+        if($res) while($row = $res->fetch_assoc()) $stats['por_usuario'][] = $row;
+
+        $res = self::$db->query("SELECT m.nombre as etiqueta, COUNT(a.id) as total FROM atenciones a INNER JOIN cat_motivo_atencion m ON a.id_motivo_atencion = m.id WHERE $where GROUP BY m.id ORDER BY total DESC");
+        if($res) while($row = $res->fetch_assoc()) $stats['por_motivo'][] = $row;
+
+        $res = self::$db->query("SELECT m.nombre as etiqueta, COUNT(a.id) as total FROM atenciones a INNER JOIN cat_medio_atencion m ON a.id_medio_atencion = m.id WHERE $where GROUP BY m.id ORDER BY total DESC");
+        if($res) while($row = $res->fetch_assoc()) $stats['por_medio'][] = $row;
+
+        return $stats;
+    }
 }

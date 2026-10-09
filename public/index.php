@@ -25,5 +25,7 @@ $router->post('/api/buscar-comunidad', [Controllers\BitacoraController::class, '
 $router->get('/mis-atenciones', [BitacoraController::class, 'misAtenciones']);
 // Reportes
 $router->get('/reportes', [Controllers\BitacoraController::class, 'reportes']);
+// Exportar reportes a CSV
+$router->post('/reportes/exportar', [Controllers\BitacoraController::class, 'exportarCsv']);
 // Comprueba y valida las rutas, que existan y les asigna las funciones del Controlador
 $router->comprobarRutas();

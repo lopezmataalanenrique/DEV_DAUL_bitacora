@@ -249,6 +249,22 @@ class BitacoraController
 
         $alertas = [];
         $fecha_hoy = date('Y-m-d');
+        // --- ESTADÍSTICAS FLEXIBLES ---
+        $stat_tipo = $_GET['stat_tipo'] ?? 'mes';
+        $stat_valor = $_GET['stat_valor'] ?? '';
+
+        // Si no han elegido nada, calculamos el periodo actual por defecto
+        if (empty($stat_valor)) {
+            if ($stat_tipo === 'semana') {
+                $stat_valor = date('Y-\WW'); // Ej: 2026-W41
+            } else if ($stat_tipo === 'trimestre') {
+                $stat_valor = date('Y') . '-' . ceil(date('n') / 3); // Ej: 2026-4
+            } else {
+                $stat_valor = date('Y-m'); // Ej: 2026-10
+            }
+        }
+
+        $estadisticas = Atencion::obtenerEstadisticas($stat_tipo, $stat_valor);
 
         // --- MANEJO DE FECHAS (Igual a tus atenciones) ---
         if (!isset($_GET['inicio']) && !isset($_GET['fin'])) {
@@ -302,6 +318,9 @@ class BitacoraController
             'pagina_actual' => $pagina_actual,
             'filtros' => $filtros,
             'total_registros' => $total_registros,
+            'stat_tipo' => $stat_tipo,
+            'stat_valor' => $stat_valor,
+            'estadisticas' => $estadisticas,
             
             // Catálogos
             'escuelas' => $escuelas,
@@ -311,4 +330,63 @@ class BitacoraController
             'usuarios' => $usuarios
         ], 'layout_app');
     }
+
+    public static function exportarCsv()
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        // SEGURIDAD: Solo Administrador y Supervisor
+        if (!isset($_SESSION['rol']) || !in_array($_SESSION['rol'], ['1', '2'])) {
+            header('Location: /mis-atenciones');
+            exit;
+        }
+
+        // Recibir fechas por POST
+        $fecha_inicio = $_POST['inicio_csv'] ?? date('Y-m-01');
+        $fecha_fin = $_POST['fin_csv'] ?? date('Y-m-d');
+
+        // Validar que la fecha final no sea menor a la de inicio
+        if ($fecha_inicio > $fecha_fin) {
+            $fecha_inicio = date('Y-m-01');
+            $fecha_fin = date('Y-m-d');
+        }
+
+        // Traer datos
+        $atenciones = Atencion::obtenerParaCsv($fecha_inicio, $fecha_fin);
+
+        // Configuramos las cabeceras HTTP para forzar la descarga del archivo
+        $nombre_archivo = 'reporte_atenciones_' . $fecha_inicio . '_al_' . $fecha_fin . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=' . $nombre_archivo);
+
+        // Abrir la salida estándar de PHP
+        $salida = fopen('php://output', 'w');
+
+        // Truco: Imprimir BOM para que Excel respete el UTF-8 (acentos y ñ)
+        fprintf($salida, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        // 1. Escribir los encabezados de las columnas
+        fputcsv($salida, ['Fecha', 'Solicitante', 'Correo', 'Perfil', 'Escuela', 'Motivo', 'Medio', 'Atendido por']);
+
+        // 2. Escribir fila por fila
+        foreach ($atenciones as $registro) {
+            fputcsv($salida, [
+                date('d/m/Y H:i', strtotime($registro->fecha_atencion)),
+                $registro->nombre_completo,
+                $registro->correo,
+                $registro->tipo_nombre,
+                $registro->escuela_nombre,
+                $registro->motivo_nombre,
+                $registro->medio_nombre,
+                $registro->usuario_nombre ?? 'N/A'
+            ]);
+        }
+
+        fclose($salida);
+        exit; // Detenemos la ejecución para que no renderice HTML al final del archivo
+    }
+
+    
 }
